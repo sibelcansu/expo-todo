@@ -1,19 +1,46 @@
-import { Stack, Link } from 'expo-router';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, Text, View } from 'react-native';
+import Card from '~/components/Card';
+import { db } from '~/src/services/firebaseConfig';
 
-import { Button } from '~/components/Button';
-import { Container } from '~/components/Container';
-import { ScreenContent } from '~/components/ScreenContent';
+type Task = {
+  id: string;
+  title: string;
+  content: string;
+};
 
-export default function Home() {
+const Index = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  
+  useEffect(() => {
+    const tasksRef = collection(db, 'tasks');
+
+    const unsubscribe = onSnapshot(tasksRef, (snapshot) => {
+      const updatedTasks: Task[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Task, 'id'>),
+      }));
+      setTasks(updatedTasks);
+    });
+
+    return () => unsubscribe(); // bileşen unmount olursa listener'ı kapat
+  }, []);
+
   return (
-    <>
-      <Stack.Screen options={{ title: 'Home' }} />
-      <Container>
-        <ScreenContent path="app/index.tsx" title="Home"></ScreenContent>
-        <Link href={{ pathname: '/details', params: { name: 'Dan' } }} asChild>
-          <Button title="Show Details" />
-        </Link>
-      </Container>
-    </>
+    <View className="flex-1 bg-slate-100">
+      <SafeAreaView className="flex-row items-center px-8 pt-8">
+        <Text className="text-center text-3xl font-bold">Your Notes</Text>
+      </SafeAreaView>
+
+      <ScrollView className="px-8 mt-4">
+        {tasks.map((task) => (
+          <Card key={task.id} id={task.id} name={task.title} content={task.content} />
+        ))}
+      </ScrollView>
+
+    </View>
   );
-}
+};
+
+export default Index;
